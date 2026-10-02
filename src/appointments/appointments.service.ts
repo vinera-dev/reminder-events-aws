@@ -7,7 +7,11 @@ import {
 import { randomUUID } from 'node:crypto';
 import { Appointment, AppointmentStatus } from './appointment.js';
 import { EventPublisher } from '../events/event-publisher.js';
-import { appointmentCreated } from './appointment-events.js';
+import {
+  appointmentCancelled,
+  appointmentCreated,
+  appointmentRescheduled,
+} from './appointment-events.js';
 import { AppointmentsRepository } from './appointments.repository.js';
 import { Clock } from './clock.js';
 import { CreateAppointmentDto } from './dto/create-appointment.dto.js';
@@ -38,15 +42,21 @@ export class AppointmentsService {
   async reschedule(id: string, newScheduledAt: string): Promise<Appointment> {
     const appointment = await this.requireScheduled(id);
     const scheduledAt = await this.requireFreeFutureSlot(newScheduledAt, id);
-    return this.repository.save({ ...appointment, scheduledAt });
+    const saved = await this.repository.save({ ...appointment, scheduledAt });
+    await this.events.publish(
+      appointmentRescheduled(saved, appointment.scheduledAt, this.clock.now()),
+    );
+    return saved;
   }
 
   async cancel(id: string): Promise<Appointment> {
     const appointment = await this.requireScheduled(id);
-    return this.repository.save({
+    const saved = await this.repository.save({
       ...appointment,
       status: AppointmentStatus.Cancelled,
     });
+    await this.events.publish(appointmentCancelled(saved, this.clock.now()));
+    return saved;
   }
 
   private async requireScheduled(id: string): Promise<Appointment> {

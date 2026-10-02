@@ -20,7 +20,7 @@ Show how to build and deploy an event-driven, serverless backend with TypeScript
 
 ## Planned stack
 
-TypeScript, Node.js, NestJS, AWS (SNS, SQS, Lambda, DynamoDB, CloudWatch), Terraform, Jest, GitHub Actions.
+TypeScript, Node.js, NestJS, AWS (SNS, SQS, Lambda, DynamoDB, CloudWatch), Terraform, Vitest, GitHub Actions.
 
 ## Roadmap
 

@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Appointment, AppointmentStatus } from './appointment.js';
+import { EventPublisher } from '../events/event-publisher.js';
+import { appointmentCreated } from './appointment-events.js';
 import { AppointmentsRepository } from './appointments.repository.js';
 import { Clock } from './clock.js';
 import { CreateAppointmentDto } from './dto/create-appointment.dto.js';
@@ -15,11 +17,12 @@ export class AppointmentsService {
   constructor(
     private readonly repository: AppointmentsRepository,
     private readonly clock: Clock,
+    private readonly events: EventPublisher,
   ) {}
 
   async create(dto: CreateAppointmentDto): Promise<Appointment> {
     const scheduledAt = await this.requireFreeFutureSlot(dto.scheduledAt);
-    return this.repository.save({
+    const saved = await this.repository.save({
       id: randomUUID(),
       ownerName: dto.ownerName,
       ownerEmail: dto.ownerEmail,
@@ -28,6 +31,8 @@ export class AppointmentsService {
       scheduledAt,
       status: AppointmentStatus.Scheduled,
     });
+    await this.events.publish(appointmentCreated(saved, this.clock.now()));
+    return saved;
   }
 
   async reschedule(id: string, newScheduledAt: string): Promise<Appointment> {
